@@ -6,19 +6,21 @@ has GitLab issue.
 
 The script performs the following:
 
- * Reads configuration file and Mantis SVN export
+ * Reads configuration file and Mantis issues export
  * Fetches GitLab Project and Members
  * Fetches existing issues from GitLab Project
  * For each Mantis Issue
-   * If a corresonding GitLab issue exists, its Title, Description, Labels and Closed status are updated
+   * If a corresponding GitLab issue exists, its Title, Description, Labels and Closed status are updated
    * Otherwise
      * If there is a "gap" in Mantis issue numbers, "Skipped Mantis Issue" GitLab issue(s) are created
      * A new GitLab issue is created with an appropriate Title, Description, Labels and Closed status
 
 ## Install
 
+Unfortunately you have to download the program `m2gl.js` install the requirements and execute it via npm.
 ```
-npm install -g nonplus/mantis2gitlab
+npm install
+npm m2gl
 ```
 
 ## Usage
@@ -30,18 +32,23 @@ m2gl -i options
 ## Options
 
 ```
-  -i, --input      CSV file exported from Mantis (Example: issues.csv)               [required]
-  -c, --config     Configuration file (Example: config.json)                         [required]
-  -g, --gitlaburl  GitLab URL hostname (Example: https://gitlab.com)                 [required]
-  -p, --project    GitLab project name including namespace (Example: mycorp/myproj)  [required]
-  -t, --token      An admin user's private token (Example: a2r33oczFyQzq53t23Vj)     [required]
-  -s, --sudo       The username performing the import (Example: bob)                 [required]
-  -f, --from       The first issue # to import (Example: 123)                      
+  -i, --input           CSV file exported from Mantis (Example: issues.csv)               [required]
+  -c, --config          Configuration file (Example: config.json)                         [required]
+  -g, --gitlaburl       GitLab URL hostname (Example: https://gitlab.com)                 [required]
+  -p, --project         GitLab project name including namespace (Example: mycorp/myproj)  [required]
+  -t, --token           An admin user's private token (Example: a2r33oczFyQzq53t23Vj)     [required]
+  -s, --sudo            The username performing the import (Example: bob)                 [required]
+  -f, --from            The first issue # to import (Example: 123)
+  -n, --dryRun          (experimental) Just show migration steps, no write operations
+  -v, --verbose         Output signifigant more log messages about executed steps
+  -rms, --removeSkipped (experimental) Use after test/debugging session or run migration
+                        to remove all makeshift issues created in GitLab to match
+                        mantis-id; no migration executed with this parameter
 ```
 
 ## Config File
 
-In order to correctly map Mantis attributes you should create a JSON file and specify it with the **-c** switch.
+In order to correctly map Mantis attributes you must create a JSON file and specify it with the **-c** switch.
 
 ### Users
 
@@ -73,14 +80,14 @@ will contain a back-link to their corresponding Mantis issue.
 
 ### Category Labels (optional)
 
-This section maps Mantis Categories to corresponding GitLab labels.
+This section maps Mantis Category-ids to corresponding GitLab labels.
 
 ```
 {
   "category_labels": {
-    "Admin UI": "area:Admin",
-    "Voter UI": "area:Voter",
-    "Server": "area:Service"
+    "1": "area:Admin",
+    "2": "area:Voter",
+    "5": "area:Service"
     }
 }
 ```
@@ -149,6 +156,21 @@ Note that the numeric severities are used when exporting from SQL.
 }
 ```
 
+
+### Version, Milestones
+
+This section maps which Mantis project version should be mapped to according
+GitLab milestone-id.
+
+```
+"version_milestones": {
+    "MantisNameOfVersion v1": 1,
+    "MantisNameOfVersion 1.1": 2,
+    "MantisNameOfVersion 2.0": 5
+}
+```
+
+
 ## Exporting From Mantis
 
 The input to this script is a CSV file with the following columns:
@@ -160,6 +182,7 @@ The input to this script is a CSV file with the following columns:
   * `Severity` - Will create a corresponding GitLab *Label* from `config.severity_labels[Severity]` 
   * `Created` - Will be included in the *Description* header
   * `Updated` - Will be included in the *Description* header, if different from `Created`
+  * `TargetVersion` - Will assign ticket to corresponding GitLab milestone (see [Config](#version-milestones))
   * `Reporter` - Will be included in the *Description* header
   * `Assigned To` - Will be included in the *Description* header
   * `Description` - Will be included in the *Description*
@@ -170,7 +193,7 @@ The input to this script is a CSV file with the following columns:
 
 You can export a summary of the Mantis issues from the _View Issues_ page by clicking on the _Export CSV_ button.
 
-**Note:** This export will only include a subset of the issues and is not the recommended approach.
+**Note:** This export will only include a subset of the issues and is definitely not the recommended approach.
 
 ### Exporting from database
 
@@ -180,24 +203,25 @@ The following SQL query pulls all the supported columns from the Mantis database
 SELECT
 	bug.id as Id,
 	project.name as Project,
-	bug.category as Category,
+	bug.category_id as CategoryId,
 	bug.summary as Summary,
 	bug.priority as Priority,
 	bug.severity as Severity,
 	bug.status as Status,
-	bug.date_submitted as Created,
-	bug.last_updated as Updated,
+	FROM_UNIXTIME(bug.date_submitted, '%Y-%m-%dT%TZ') as Created,
+	bug.date_submitted as CreatedTimestamp,
+	FROM_UNIXTIME(bug.last_updated, '%Y-%m-%dT%TZ') as Updated,
+	bug.last_updated as UpdatedTimestamp,
+	bug.target_version as TargetVersion,
+	bug.fixed_in_version as FixedInVersion,
 	reporter.username as Reporter,
 	handler.username as "Assigned To",
 	bug_text.description as Description,
 	bug_text.additional_information as Info,
 	GROUP_CONCAT(
-				CONCAt('*', bugnote.date_submitted, ' - ', note_reporter.username, '*
-
-', bugnote_text.note)
-				ORDER BY bugnote.Id
-				SEPARATOR '$$$$'
-			) as Notes
+        CONCAT('*', bugnote.date_submitted, ' - ', note_reporter.username, '*', bugnote_text.note)
+        ORDER BY bugnote.Id SEPARATOR '$$$$'
+    ) as Notes
 FROM
 	mantis_bug_table as bug
 	JOIN mantis_project_table project ON bug.project_id = project.id
@@ -210,30 +234,38 @@ FROM
 WHERE
 	project.name = 'PROJECT_NAME'
 GROUP BY bug.id
-ORDER BY bug.id
+ORDER BY bug.id;
 ```
 
 ## Notes
 - Make sure the input CSV file only includes issues for the project you want to import.
-- In version 6.4.3, GitLab API does not support setting creation date of issues. So all imported issues will have a creation time of now.
-- In version 6.4.3, GitLab API fails to import issues with very long titles.
-- In version 6.4.3, GitLab does not allow issues to be deleted. So be careful when importing issues into an active project.
-- Milestones are not currently supported.
+- CSV file with delimiter=, and escape="
+- Use experimental command line switches only on test environments
+  - Parameter `dryRun` would lead to infinite loop
+
 
 ## Version History
 + **1.0**
-	+ Initial release
+  + Initial release
++ **2.0**
+  + Update node-libraries
+  + Update syntax
+  + Add dry-run and verbose mode
+  + Adapt to GitLab API v4
+  + Add garbage collect option
 
-## Author
+## Authors
+**Frithjof Gnas**
++ https://github.com/fg-ok
+
 **Stepan Riha**
-
 + http://github.com/nonplus
 
 ## Copyright and License
 
-Based on https://github.com/soheilpro/youtrack2gitlab
+Based on https://github.com/nonplus/mantis2gitlab
 
-Copyright 2015 Stepan Riha
+Copyright 2024 Frithjof Gnas
 
 Licensed under the The MIT License (the "License");
 you may not use this work except in compliance with the License.
