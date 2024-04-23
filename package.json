@@ -3,6 +3,8 @@
   "version": "2.0.0",
   "description": "Import Mantis issues into GitLab.",
   "dependencies": {
+    "async": "~0.2.9",
+    "colors": "~1.4",
     "csv": "~0.3.6",
     "lodash": "^3.10.1",
     "optimist": "~0.6.0",

@@ -12,8 +12,8 @@ The script performs the following:
  * For each Mantis Issue
    * If a corresponding GitLab issue exists, its Title, Description, Labels and Closed status are updated
    * Otherwise
-     * If there is a "gap" in Mantis issue numbers, "Skipped Mantis Issue" GitLab issue(s) are created
      * A new GitLab issue is created with an appropriate Title, Description, Labels and Closed status
+   * All issue notes/comments imported from Mantis are replaced (removed and created again)
 
 ## Install
 
@@ -41,14 +41,11 @@ m2gl -i options
   -f, --from            The first issue # to import (Example: 123)
   -n, --dryRun          (experimental) Just show migration steps, no write operations
   -v, --verbose         Output signifigant more log messages about executed steps
-  -rms, --removeSkipped (experimental) Use after test/debugging session or run migration
-                        to remove all makeshift issues created in GitLab to match
-                        mantis-id; no migration executed with this parameter
 ```
 
 ## Config File
 
-In order to correctly map Mantis attributes you must create a JSON file and specify it with the **-c** switch.
+In order to correctly map Mantis attributes you must create a JSON file and specify it with the **-c** switch (see [mantis2gitlab.config.json](./example.config.json)).
 
 ### Users
 
@@ -187,17 +184,18 @@ The input to this script is a CSV file with the following columns:
   * `Assigned To` - Will be included in the *Description* header
   * `Description` - Will be included in the *Description*
   * `Info` - Will be appended the *Description*
-  * `Notes` - Will be split on `"$$$$"` and appended the *Description*
+  * `Notes` - Will be split on `"$$$$"` and attached as GitLab issue comments
 
 ### Exporting from Mantis UI
 
 You can export a summary of the Mantis issues from the _View Issues_ page by clicking on the _Export CSV_ button.
 
-**Note:** This export will only include a subset of the issues and is definitely not the recommended approach.
+**Note:** This export will only include a subset of the issues, will lack the issue notes,  and is definitely not the recommended approach.
 
 ### Exporting from database
 
-The following SQL query pulls all the supported columns from the Mantis database. Make sure you specify the correct `PROJECT_NAME`:
+Recommend: The following SQL query pulls all the supported columns from the Mantis database. Make sure you specify the
+correct `PROJECT_NAME`:
 
 ```
 SELECT
@@ -219,7 +217,7 @@ SELECT
 	bug_text.description as Description,
 	bug_text.additional_information as Info,
 	GROUP_CONCAT(
-        CONCAT('*', bugnote.date_submitted, ' - ', note_reporter.username, '*', bugnote_text.note)
+        CONCAT(FROM_UNIXTIME(bugnote.date_submitted, '%Y-%m-%dT%TZ'), '][', note_reporter.username, '][', bugnote_text.note)
         ORDER BY bugnote.Id SEPARATOR '$$$$'
     ) as Notes
 FROM
@@ -240,8 +238,7 @@ ORDER BY bug.id;
 ## Notes
 - Make sure the input CSV file only includes issues for the project you want to import.
 - CSV file with delimiter=, and escape="
-- Use experimental command line switches only on test environments
-  - Parameter `dryRun` would lead to infinite loop
+- You should use `--verbose` parameter when using `--dryRun` 
 
 
 ## Version History
@@ -252,7 +249,6 @@ ORDER BY bug.id;
   + Update syntax
   + Add dry-run and verbose mode
   + Adapt to GitLab API v4
-  + Add garbage collect option
 
 ## Authors
 **Frithjof Gnas**
@@ -263,7 +259,7 @@ ORDER BY bug.id;
 
 ## Copyright and License
 
-Based on https://github.com/nonplus/mantis2gitlab
+Based on https://github.com/nonplus/mantis2gitlab which is based on https://github.com/soheilpro/youtrack2gitlab
 
 Copyright 2024 Frithjof Gnas
 
