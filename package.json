@@ -1,17 +1,16 @@
 {
   "name": "mantis2gitlab",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Import Mantis issues into GitLab.",
   "dependencies": {
     "async": "~0.2.9",
-    "colors": "~0.6.2",
+    "colors": "~1.4",
     "csv": "~0.3.6",
     "lodash": "^3.10.1",
     "optimist": "~0.6.0",
     "q": "^1.4.1",
     "q-io": "^1.13.1",
-    "restler": "~3.1.0",
-    "restler-q": "^0.1.1"
+    "superagent": "^8.1"
   },
   "devDependencies": {},
   "scripts": {
@@ -24,17 +23,18 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/nonplus/mantis2gitlab"
+    "url": "https://github.com/fg-ok/mantis2gitlab"
   },
   "bugs": {
-    "url": "https://github.com/nonplus/mantis2gitlab/issues"
+    "url": "https://github.com/fg-ok/mantis2gitlab/issues"
   },
   "keywords": [
     "gitlab",
     "mantis",
-    "issue"
+    "issue",
+    "migration"
   ],
-  "author": "Stepan Riha",
+  "author": "Frithjof Gnas",
   "license": "MIT",
   "readmeFilename": "README.md"
 }

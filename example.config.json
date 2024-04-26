@@ -1,0 +1,55 @@
+{
+  "users": {
+    "mantisUserName1": {
+      "gl_username": "GitLabUserName1"
+    },
+    "mantisUserName2": {
+      "gl_username": "GitLabUserName2"
+    }
+  },
+  "mantisUrl": "https://www.oldserver.xyz/mantis",
+  "category_labels": {
+    "1": "area:Admin",
+    "2": "area:Voter",
+    "5": "area:Service"
+  },
+  "priority_labels": {
+    "20": "priority:low",
+    "low": "priority:low",
+    "40": "priority:high",
+    "high": "priority:high",
+    "50": "priority:urgent",
+    "urgent": "priority:urgent",
+    "60": "priority:immediate",
+    "immediate": "priority:immediate"
+  },
+  "severity_labels": {
+    "10": "severity:feature",
+    "feature": "severity:feature",
+    "20": "severity:trivial",
+    "trivial": "severity:trivial",
+    "30": "severity:text",
+    "text": "severity:text",
+    "40": "severity:tweak",
+    "tweak": "severity:tweak",
+    "50": "severity:minor",
+    "minor": "severity:minor",
+    "60": "severity:major",
+    "major": "severity:major",
+    "70": "severity:crash",
+    "crash": "severity:crash",
+    "80": "severity:block",
+    "block": "severity:block"
+  },
+  "closed_statuses": {
+    "80": true,
+    "resolved": true,
+    "90": true,
+    "closed": true
+  },
+  "version_milestones": {
+    "MantisNameOfVersion v1": 1,
+    "MantisNameOfVersion 1.1": 2,
+    "MantisNameOfVersion 2.0": 5
+  }
+}
