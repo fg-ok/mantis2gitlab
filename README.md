@@ -20,7 +20,7 @@ The script performs the following:
 Unfortunately you have to download the program `m2gl.js` install the requirements and execute it via npm.
 ```
 npm install
-npm m2gl
+npm m2gl.js
 ```
 
 ## Usage
@@ -237,6 +237,7 @@ ORDER BY bug.id;
 
 ## Notes
 - Make sure the input CSV file only includes issues for the project you want to import.
+- If you get the error `Warning: #1260 Row ... was cut by GROUP_CONCAT()` on executing the export SQL query, prepend the query `SET group_concat_max_len=20000;`
 - CSV file with delimiter=, and escape="
 - You should use `--verbose` parameter when using `--dryRun` 
 
